@@ -1,7 +1,7 @@
 def consolidate_cart(cart)
-  new_cart = cart.reduce(&:merge)              # => {"TEMPEH"=>{:price=>3.0, :clearance=>true}, "PEANUTBUTTER"=>{:price=>3.0, :clearance=>true}, "ALMONDS"=>{:price=>9.0, :clearance=>false}}, {"AVOCADO"=>{:price=>3.0, :clearance=>true}, "KALE"=>{:price=>3.0, :clearance=>false}}
-  new_cart.each do |k, v|                      # => {"TEMPEH"=>{:price=>3.0, :clearance=>true}, "PEANUTBUTTER"=>{:price=>3.0, :clearance=>true}, "ALMONDS"=>{:price=>9.0, :clearance=>false}}, {"AVOCADO"=>{:price=>3.0, :clearance=>true}, "KALE"=>{:price=>3.0, :clearance=>false}}
-    v[:count] = cart.count {|i| i == {k => v}}  # => 1, 1, 1, 2, 1
+  new_cart = cart.reduce(&:merge)
+  new_cart.each do |k, v|
+    v[:count] = cart.count { |i| i == { k => v } }
   end
 end
 
@@ -12,10 +12,11 @@ def apply_coupons(cart, coupons)
     item_name = coupon[:item]
     cart_item = cart[item_name]
     next unless cart_item
+
+    next if cart_item[:count] < coupon[:num]
+
     cart_item[:count] -= coupon[:num]
-    if cart_item[:count] <= 0
-      cart.delete(cart_item)
-    end
+    cart.delete(cart_item) if cart_item[:count] <= 0
 
     # the output format doesn't really acount for multiple coupons for the
     # same item with different values
@@ -30,9 +31,22 @@ def apply_coupons(cart, coupons)
 end
 
 def apply_clearance(cart)
-  # code here
+  cart.each do |_, v|
+    v[:price] = (v[:price] * 0.8).round 2 if v[:clearance]
+  end
 end
 
 def checkout(cart, coupons)
-  # code here
+  cart = consolidate_cart cart
+  puts "2 #{cart}"
+  apply_coupons cart, coupons
+  puts "3 #{cart}"
+  apply_clearance cart
+  puts "4 #{cart}"
+  total = 0
+  cart.each { |k, v| total += v[:price] * v[:count] }
+  total = (total * 0.9).round 2 if total > 100
+  total
 end
+
+checkout [{"BEETS"=>{:price=>2.5, :clearance=>false, :count=>1}}],[]
